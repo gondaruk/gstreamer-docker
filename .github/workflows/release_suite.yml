@@ -1,0 +1,50 @@
+name: Release Suite
+
+on:
+  workflow_dispatch:
+    inputs:
+      gstreamerRepo:
+        description: 'GStreamer Repo'
+        required: true
+        default: 'https://gitlab.freedesktop.org/gstreamer/gstreamer.git'
+      gstreamerBranch:
+        description: 'GStreamer Branch'
+        required: true
+        default: '1.20'
+      dockerPush:
+        description: 'Push images'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  release-docker:
+    runs-on: ubuntu-latest
+    env:
+      GSTREAMER_REPO: ${{ inputs.gstreamerRepo }}
+      GSTREAMER_BRANCH: ${{ inputs.gstreamerBranch }}
+      DOCKER_PUSH: ${{ inputs.dockerPush }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          version: latest
+          install: true
+
+      - name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
+
+      - name: Build docker images
+        run: ./release.sh
